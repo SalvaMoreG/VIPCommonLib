@@ -1,0 +1,73 @@
+sources = $(wildcard src/*.cc)
+objects = $(subst src/,tmp/,$(patsubst %.cc,%.o,$(sources)))
+exec = $(subst src/,bin/,$(subst .cxx,,$(wildcard src/*.cxx)))
+
+outlib = ./lib/libVIPcommonlib.a
+
+CC = g++
+LOCAL_INC = -Iinclude/ 
+
+# VIP07, VIP09, VIP04:
+#	ROOTLIBS = $(shell root-config --libs)
+#	ROOTINCDIR = $(shell root-config --incdir)
+# VIP12 (ROOT6): (set by envir_VIP12.sh)
+ROOTLIBS = ${VIP12ROOTLIBS}
+ROOTINCDIR = ${VIP12ROOTINCDIR}
+
+#	CFLAGS = $(LOCAL_INC) -isystem$(ROOTINCDIR) -std=c++0x
+CFLAGS = $(LOCAL_INC) -isystem$(ROOTINCDIR) 
+CCFLAGS = $(LOCAL_INC) 
+
+all: $(objects) $(exec) $(outlib)
+	@echo all done!
+
+$(objects): tmp/%.o: src/%.cc  
+	@echo compiling $@
+	@$(CC) -c $(CFLAGS) $< -o $@
+
+$(exec): bin/% : src/%.cxx $(objects)
+	@echo compiling $@
+#	@$(CC) $(CCFLAGS) $< $(objects)  -o $@ $(CCFLAGS) $(ROOTLIBS)
+	@$(CC) $(objects) $(CFLAGS) $< -o $@ $(CCFLAGS) $(ROOTLIBS) $(FFTWFLAGS)
+	@echo $(@F) compiled.
+
+libobj = tmp/CVIP3Matrix.o tmp/CVIP3Vector.o tmp/CVIPUtils.o tmp/CVIPHit.o tmp/CVIPEvent.o tmp/CVIPFieldOfView.o \
+		tmp/CVIPPhysicsUtils.o tmp/CVIPDetector.o tmp/CVIPWildermanUtils.o tmp/CVIPImage.o tmp/CVIPSemiConductorEnergy.o \
+		tmp/CVIPVector.o tmp/CVIPImageKernel.o tmp/CVIPBaseLor.o tmp/CVIPBaseCone.o tmp/CVIPMapData.o \
+		tmp/CVIPQetirData.o tmp/CVIPListModeDataOperations.o tmp/CVIPGeometry.o \
+		tmp/CVIPGaussianElimination.o tmp/CVIPMatrix.o tmp/CVIPVector.o tmp/CVIPRandom.o
+
+$(outlib): $(libobj)
+	ar rcs $(outlib) $(libobj)
+	ranlib $(outlib)
+	ar tv $(outlib)
+
+$(notdir $(exec)): % : bin/%
+
+$(notdir $(objects)):%:tmp/%
+
+tmp/cc_%.d: src/%.cc 
+	@$(CC) -MM $(CFLAGS) $< | sed 's:$*\.o[ \:]:tmp/& $@:g' >  $@
+
+tmp/cxx_%.d: src/%.cxx
+	@$(CC) -MM $(CFLAGS) $< | sed 's:\.o::g' | sed 's:$*[ \:]:bin/& $@:g'  > $@
+
+-include $(subst src/,tmp/cc_,$(patsubst %.cc,%.d,$(wildcard src/*.cc)))
+-include $(subst src/,tmp/cxx_,$(patsubst %.cxx,%.d,$(wildcard src/*.cxx)))
+
+.PHONY: nobin
+nobin: $(objects)
+
+.PHONY: bin
+bin: $(exec)
+
+.PHONY: cleanemacs
+cleanemacs:
+	@-rm *~ */*~ &> /dev/null
+
+.PHONY: clean
+clean:
+	@-rm tmp/*.o tmp/*.d bin/* lib/* &> /dev/null
+
+.PHONY: cleanall
+cleanall:clean cleanemacs

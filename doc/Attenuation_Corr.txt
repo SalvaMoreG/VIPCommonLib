@@ -1,0 +1,46 @@
+
+IWDM article - 2016:
+====================
+
+we used a basic attenuation correction procedure, where all pixels inside the phantom are assigned an attenuation correction factor of 0.0096 mm^-1, and the weights of the LORs are normalized in proportion to how much of their length is traversing the phantom.
+
+-----------------------------------------------------
+
+Scatter and attenuation corrections for a PEM detector using List-Mode OSEM  (Cláudia S. Ferreira, et al.)
+============================================================================
+
+Beer-Lambert law:
+	I/I_0 = exp(-1.0 * μ * x) ==> ACF = exp(μ * x)
+
+where μ is the linear attenuation coefficient, which for 511 keV
+photons in breast tissue is approximately 0.0958 cm^-1 .
+
+(Machiel: = 0.00958 mm^-1)
+
+ACF = Attenuation correction factor
+
+Formula 3 (LM-OSEM):
+
+x(n) = x(n) SIGMA_event [ ACF * tij/ sigma_all_FOV_bins_for_this_event x(FOV_bin)]
+	(event = LOR)
+
+NOTE: ACF = exp(1.0 * mu * x)
+	(NOTE the plus sign!!!)
+
+------------------------------------------------------
+
+CC_OSEM:
+
+double att = m_attMap.GetVoxelValue( index );
+double attcor = exp(-1.0 * att * distance);
+
+NOTE: attcor = exp(-1.0 * att * distance)
+	(NOTE the minus sign!!!)
+
+sensitivity_j *= attcor;
+
+lambda_j^{l+1} = (lambda^{l} / s_j) 
+	* SUM_i^{Nevts} [ (delta_{ji} * T_{ij}) /  (SUM_{k=1}^{M_FOVbinsOnThisEvt_i} delta_{ki} T_{ik} lambda_k) ]
+
+
+
